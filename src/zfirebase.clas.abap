@@ -4,9 +4,6 @@ class ZFIREBASE definition
   create private .
 
 public section.
-
-  class-methods INITIALIZE_APP .
-  methods SIGNIN_EMAIL_AND_PASSWORD .
 protected section.
 private section.
 ENDCLASS.
@@ -14,12 +11,4 @@ ENDCLASS.
 
 
 CLASS ZFIREBASE IMPLEMENTATION.
-
-
-  method INITIALIZE_APP.
-  endmethod.
-
-
-  method SIGNIN_EMAIL_AND_PASSWORD.
-  endmethod.
 ENDCLASS.
