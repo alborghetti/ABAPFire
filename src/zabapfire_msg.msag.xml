@@ -38,6 +38,36 @@
      <MSGNR>004</MSGNR>
      <TEXT>HTTP Connection fails</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAPFIRE_MSG</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>Incorrect authentication parameters (email, password)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAPFIRE_MSG</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>Wrong firebase configuration: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAPFIRE_MSG</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>Missing attribute for JSON serialization</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAPFIRE_MSG</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>Conversion error in response deserialization</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAPFIRE_MSG</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>HTTP 400 Error: &amp;1</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

@@ -27,18 +27,30 @@ public section.
       value(RREF_FIREBASE) type ref to ZABAPFIRE_CL_FIREBASE
     raising
       ZCX_ABAPFIRE_FIREBASE .
-  PROTECTED SECTION.
+  methods GET_CONFIG
+    returning
+      value(RS_CONFIG) type TY_FIREBASE_CONFIG .
+  methods GET_CLIENT
+    returning
+      value(RREF_HTTP_CLIENT) type ref to IF_HTTP_CLIENT .
+  methods GET_PROXY_CONF
+    exporting
+      !PROXY type STRING
+      !PROXY_PORT type STRING .
+protected section.
 private section.
 
-  class-data SV_PROXY type STRING .
-  class-data SV_PROXY_PORT type STRING .
   class-data SREF_FIREBASE type ref to ZABAPFIRE_CL_FIREBASE .
+  data MV_PROXY type STRING .
+  data MV_PROXY_PORT type STRING .
   data MS_CONFIG type TY_FIREBASE_CONFIG .
-  data MV_HTTP_CLIENT type ref to IF_HTTP_CLIENT .
+  data MREF_HTTP_CLIENT type ref to IF_HTTP_CLIENT .
 
   methods CONSTRUCTOR
     importing
       !CONFIG type TY_FIREBASE_CONFIG optional
+      !PROXY type STRING
+      !PROXY_PORT type STRING
     raising
       ZCX_ABAPFIRE_FIREBASE .
 ENDCLASS.
@@ -50,6 +62,8 @@ CLASS ZABAPFIRE_CL_FIREBASE IMPLEMENTATION.
 
   METHOD constructor.
     DATA lv_url TYPE string.
+    mv_proxy = proxy.
+    mv_proxy_port = proxy_port.
 *   Create API Url
     ASSERT CONDITION NOT config-projectid IS INITIAL.
     ms_config = config.
@@ -59,11 +73,11 @@ CLASS ZABAPFIRE_CL_FIREBASE IMPLEMENTATION.
     CALL METHOD cl_http_client=>create_by_url
       EXPORTING
         url                = lv_url
-        proxy_host         = sv_proxy
-        proxy_service      = sv_proxy_port
+        proxy_host         = mv_proxy
+        proxy_service      = mv_proxy_port
         ssl_id             = 'ANONYM'
       IMPORTING
-        client             = mv_http_client
+        client             = mref_http_client
       EXCEPTIONS
         argument_not_found = 1
         plugin_not_active  = 2
@@ -76,9 +90,31 @@ CLASS ZABAPFIRE_CL_FIREBASE IMPLEMENTATION.
     ENDIF.
 
 *   Create DB Helper
-    db = zabapfire_cl_firebase_db=>create( mv_http_client ).
+    db = zabapfire_cl_firebase_db=>create( me ).
 *   Create authentication Helper
-    auth = zabapfire_cl_firebase_auth=>create( mv_http_client ).
+    auth = zabapfire_cl_firebase_auth=>create( me ).
+
+  ENDMETHOD.
+
+
+  METHOD get_client.
+
+    rref_http_client = mref_http_client.
+
+  ENDMETHOD.
+
+
+  METHOD get_config.
+
+    rs_config = ms_config.
+
+  ENDMETHOD.
+
+
+  METHOD get_proxy_conf.
+
+    proxy = mv_proxy.
+    proxy_port = mv_proxy_port.
 
   ENDMETHOD.
 
@@ -86,11 +122,11 @@ CLASS ZABAPFIRE_CL_FIREBASE IMPLEMENTATION.
   METHOD initialize_app.
 
     IF sref_firebase IS INITIAL.
-      sv_proxy = proxy.
-      sv_proxy_port = proxy_port.
       CREATE OBJECT sref_firebase
         EXPORTING
-          config = config.
+          config     = config
+          proxy      = proxy
+          proxy_port = proxy_port.
 
     ENDIF.
 

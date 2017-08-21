@@ -17,7 +17,7 @@ public section.
 
   class-methods CREATE
     importing
-      !HTTP_CLIENT type ref to IF_HTTP_CLIENT
+      !APPLICATION type ref to ZABAPFIRE_CL_FIREBASE
     returning
       value(RREF_DB) type ref to ZABAPFIRE_CL_FIREBASE_DB
     raising
@@ -26,11 +26,11 @@ public section.
 private section.
 
   class-data SREF_DB type ref to ZABAPFIRE_CL_FIREBASE_DB .
-  data MREF_HTTP_CLIENT type ref to IF_HTTP_CLIENT .
+  data APPLICATION type ref to ZABAPFIRE_CL_FIREBASE .
 
   methods CONSTRUCTOR
     importing
-      !HTTP_CLIENT type ref to IF_HTTP_CLIENT .
+      !APPLICATION type ref to ZABAPFIRE_CL_FIREBASE .
 ENDCLASS.
 
 
@@ -39,7 +39,7 @@ CLASS ZABAPFIRE_CL_FIREBASE_DB IMPLEMENTATION.
 
 
 METHOD constructor.
-  mref_http_client = http_client.
+  me->application = application.
 
 ENDMETHOD.
 
@@ -49,7 +49,7 @@ ENDMETHOD.
     IF sref_db IS INITIAL.
       CREATE OBJECT sref_db
         EXPORTING
-          http_client = http_client.
+          application = application.
 
     ENDIF.
 
