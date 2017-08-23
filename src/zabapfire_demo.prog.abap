@@ -25,6 +25,9 @@ AT SELECTION-SCREEN OUTPUT.
 
 START-OF-SELECTION.
 
+**********************************************************************
+* Initialize App
+**********************************************************************
   ls_config-apikey = 'AIzaSyCWOrr40bNNP-7yWDGgdDcpfWHRd7ZGG50'.
   ls_config-authdomain = 'abap-test-825b8.firebaseapp.com'.
   ls_config-databaseurl = 'https://abap-test-825b8.firebaseio.com'.
@@ -33,6 +36,10 @@ START-OF-SELECTION.
   ls_config-storagebucket = '686267099123'.
 
   firebase = zabapfire_cl_firebase=>initialize_app( ls_config ).
+
+**********************************************************************
+* Authenticate
+**********************************************************************
   TRY.
       firebase->auth->authenticate_with_email(
         EXPORTING
@@ -40,5 +47,40 @@ START-OF-SELECTION.
         password = p_pass ).
     CATCH zcx_abapfire_firebase INTO lcx_firebase.
       WRITE lcx_firebase->get_text( ).
+
+  ENDTRY.
+
+**********************************************************************
+* Get data
+**********************************************************************
+  TYPES:
+
+    BEGIN OF ty_user,
+      name TYPE string,
+      role TYPE string,
+    END OF ty_user,
+    BEGIN OF ty_task,
+      description TYPE string,
+      status      TYPE string,
+    END OF ty_task,
+    ty_tasks TYPE SORTED TABLE OF ty_task
+      WITH UNIQUE DEFAULT KEY,
+    BEGIN OF ty_abap.
+          INCLUDE TYPE ty_user.
+  TYPES:
+    tasks TYPE ty_tasks,
+    END OF ty_abap.
+  DATA:
+          lt_abap TYPE TABLE OF ty_abap.
+  TRY.
+      firebase->db->get(
+          EXPORTING
+          path =  '/users'
+          IMPORTING
+          child = lt_abap ).
+    CATCH zcx_abapfire_firebase INTO lcx_firebase.
+      WRITE lcx_firebase->get_text( ).
+    CATCH zcx_abapfire_json.
+      WRITE 'JSON ERROR'.
 
   ENDTRY.

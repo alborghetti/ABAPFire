@@ -12,6 +12,7 @@
     <LDBNAME>D$S</LDBNAME>
     <UCCHECK>X</UCCHECK>
    </PROGDIR>
+   <DYNPROS/>
    <TPOOL>
     <item>
      <ID>R</ID>

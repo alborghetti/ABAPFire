@@ -67,8 +67,7 @@ CLASS ZABAPFIRE_CL_FIREBASE IMPLEMENTATION.
 *   Create API Url
     ASSERT CONDITION NOT config-projectid IS INITIAL.
     ms_config = config.
-    CONCATENATE 'https://' ms_config-projectid '.firebaseio.com'
-      INTO lv_url.
+    lv_url = ms_config-databaseurl.
 *   Create HTTP Client
     CALL METHOD cl_http_client=>create_by_url
       EXPORTING

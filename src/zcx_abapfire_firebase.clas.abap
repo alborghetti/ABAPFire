@@ -1,16 +1,15 @@
-CLASS zcx_abapfire_firebase DEFINITION
-  PUBLIC
-  INHERITING FROM cx_static_check
-  FINAL
-  CREATE PUBLIC .
+class ZCX_ABAPFIRE_FIREBASE definition
+  public
+  inheriting from CX_STATIC_CHECK
+  final
+  create public .
 
-  PUBLIC SECTION.
+public section.
 
-    INTERFACES if_t100_dyn_msg .
-    INTERFACES if_t100_message .
+  interfaces IF_T100_MESSAGE .
 
-    CONSTANTS:
-      BEGIN OF http_connection_error,
+  constants:
+    BEGIN OF http_connection_error,
         msgid TYPE symsgid VALUE 'ZABAPFIRE_MSG',
         msgno TYPE symsgno VALUE '004',
         attr1 TYPE scx_attrname VALUE '',
@@ -18,8 +17,8 @@ CLASS zcx_abapfire_firebase DEFINITION
         attr3 TYPE scx_attrname VALUE '',
         attr4 TYPE scx_attrname VALUE '',
       END OF http_connection_error .
-    CONSTANTS:
-      BEGIN OF incorrect_authentication_param,
+  constants:
+    BEGIN OF incorrect_authentication_param,
         msgid TYPE symsgid VALUE 'ZABAPFIRE_MSG',
         msgno TYPE symsgno VALUE '005',
         attr1 TYPE scx_attrname VALUE '',
@@ -27,8 +26,8 @@ CLASS zcx_abapfire_firebase DEFINITION
         attr3 TYPE scx_attrname VALUE '',
         attr4 TYPE scx_attrname VALUE '',
       END OF incorrect_authentication_param .
-    CONSTANTS:
-      BEGIN OF firebase_config,
+  constants:
+    BEGIN OF firebase_config,
         msgid TYPE symsgid VALUE 'ZABAPFIRE_MSG',
         msgno TYPE symsgno VALUE '006',
         attr1 TYPE scx_attrname VALUE 'WRONG_FIREBASE_CONFIG_PARM',
@@ -36,8 +35,8 @@ CLASS zcx_abapfire_firebase DEFINITION
         attr3 TYPE scx_attrname VALUE '',
         attr4 TYPE scx_attrname VALUE '',
       END OF firebase_config .
-    CONSTANTS:
-      BEGIN OF missing_attribute,
+  constants:
+    BEGIN OF missing_attribute,
         msgid TYPE symsgid VALUE 'ZABAPFIRE_MSG',
         msgno TYPE symsgno VALUE '007',
         attr1 TYPE scx_attrname VALUE '',
@@ -45,8 +44,8 @@ CLASS zcx_abapfire_firebase DEFINITION
         attr3 TYPE scx_attrname VALUE '',
         attr4 TYPE scx_attrname VALUE '',
       END OF missing_attribute .
-    CONSTANTS:
-      BEGIN OF conversion_error,
+  constants:
+    BEGIN OF conversion_error,
         msgid TYPE symsgid VALUE 'ZABAPFIRE_MSG',
         msgno TYPE symsgno VALUE '008',
         attr1 TYPE scx_attrname VALUE '',
@@ -54,20 +53,20 @@ CLASS zcx_abapfire_firebase DEFINITION
         attr3 TYPE scx_attrname VALUE '',
         attr4 TYPE scx_attrname VALUE '',
       END OF conversion_error .
-    DATA wrong_firebase_config_parm TYPE string .
-    DATA raise_attr1 TYPE string .
+  data WRONG_FIREBASE_CONFIG_PARM type STRING .
+  data RAISE_ATTR1 type STRING .
 
-    METHODS constructor
-      IMPORTING
-        !textid                     LIKE if_t100_message=>t100key OPTIONAL
-        !previous                   LIKE previous OPTIONAL
-        !wrong_firebase_config_parm TYPE string OPTIONAL
-        !raise_attr1                TYPE string OPTIONAL .
-    CLASS-METHODS raise
-      IMPORTING
-        !iv_text TYPE clike
-      RAISING
-        zcx_abapfire_firebase .
+  methods CONSTRUCTOR
+    importing
+      !TEXTID like IF_T100_MESSAGE=>T100KEY optional
+      !PREVIOUS like PREVIOUS optional
+      !WRONG_FIREBASE_CONFIG_PARM type STRING optional
+      !RAISE_ATTR1 type STRING optional .
+  class-methods RAISE
+    importing
+      !IV_TEXT type CLIKE
+    raising
+      ZCX_ABAPFIRE_FIREBASE .
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.

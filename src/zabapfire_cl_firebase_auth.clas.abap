@@ -48,7 +48,7 @@ ENDCLASS.
 
 
 
-CLASS zabapfire_cl_firebase_auth IMPLEMENTATION.
+CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
 
 
   METHOD authenticate_with_email.
@@ -77,7 +77,7 @@ CLASS zabapfire_cl_firebase_auth IMPLEMENTATION.
           lv_body                TYPE string,
           lv_url                 TYPE string,
           ls_payload             TYPE lty_payload,
-          lref_json_serializer   TYPE REF TO zabapfire_cl_json_serializer,
+          lref_json_serializer   TYPE REF TO zabapfire_cl_json_ser_old,
           ls_entity_attribute    TYPE zabapfire_cl_json_serializer=>ty_entity_attribute,
           lt_entity_attributes   TYPE zabapfire_cl_json_serializer=>ty_entity_attributes,
           lv_response_data       TYPE string,
@@ -197,20 +197,24 @@ CLASS zabapfire_cl_firebase_auth IMPLEMENTATION.
       WHEN 400.
         zcx_abapfire_firebase=>raise(
           zabapfire_cl_http_util=>get_http_error_msg(
-            exporting
+            EXPORTING
             code = lv_http_status
-            PAYLOAD = lv_response_data )
+            payload = lv_response_data )
         ).
 
     ENDCASE.
 
 *   Deserialize JSON Payload
-    CREATE OBJECT lref_json_deserializer.
-    CALL METHOD lref_json_deserializer->deserialize
-      EXPORTING
-        json = lv_response_data
-      IMPORTING
-        abap = ls_response_abap.
+    TRY.
+        CREATE OBJECT lref_json_deserializer.
+        CALL METHOD lref_json_deserializer->deserialize
+          EXPORTING
+            json = lv_response_data
+          IMPORTING
+            abap = ls_response_abap.
+      CATCH zcx_abapfire_json.
+        zcx_abapfire_firebase=>raise( 'JSON deserialize error ' ).
+    ENDTRY.
 
 *   Store token
     mv_idtoken = ls_response_abap-idtoken.
