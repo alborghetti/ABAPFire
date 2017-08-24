@@ -65,18 +65,119 @@ private section.
       !REMOVE type ABAP_BOOL optional
       !ARRAY type ABAP_BOOL optional
       !VALUE type STRING optional
+      !TYPE type STRING optional
     raising
       ZCX_ABAPFIRE_JSON .
   methods RECURSE
     importing
       !NODE type ref to ZABAPFIRE_CL_JSON_NODE
     changing
-      !COMP type ANY .
+      !COMP type ANY
+    raising
+      ZCX_ABAPFIRE_JSON .
+  methods CONVERT_NAME_TO_ABAP
+    importing
+      !JSON_NAME type STRING
+    returning
+      value(ABAP_NAME) type STRING .
+  methods CONVERT_VALUE_TO_ABAP
+    importing
+      !JSON_VALUE type STRING
+      !JSON_TYPE type STRING
+    exporting
+      value(ABAP_VALUE) type ANY .
+  methods STRING_TO_XSTRING
+    importing
+      !IN type STRING
+    changing
+      !OUT type ANY .
 ENDCLASS.
 
 
 
 CLASS ZABAPFIRE_CL_JSON_DESERIALIZER IMPLEMENTATION.
+
+
+  METHOD convert_name_to_abap.
+
+    CHECK NOT json_name IS INITIAL.
+
+    abap_name = json_name.
+    REPLACE ALL OCCURRENCES OF REGEX `([a-z])([A-Z])` IN abap_name WITH `$1_$2`. "#EC NOTEXT
+    TRANSLATE abap_name TO UPPER CASE.
+
+  ENDMETHOD.
+
+
+  METHOD convert_value_to_abap.
+    DATA: l_elem_descr TYPE REF TO cl_abap_elemdescr,
+          l_string     TYPE string,
+          l_year       TYPE n LENGTH 4,
+          l_month      TYPE n LENGTH 2,
+          l_day        TYPE n LENGTH 2,
+          l_hour       TYPE n LENGTH 2,
+          l_minute     TYPE n LENGTH 2,
+          l_second     TYPE n LENGTH 2,
+          l_decimals   TYPE n LENGTH 7,
+          tk           LIKE l_elem_descr->type_kind,
+          an           LIKE l_elem_descr->absolute_name,
+          ol           LIKE l_elem_descr->output_length.
+
+    DEFINE escape_string.
+      REPLACE ALL OCCURRENCES OF `\"` IN &1 WITH `"`.
+      REPLACE ALL OCCURRENCES OF `\\` IN &1 WITH `\`.
+    END-OF-DEFINITION.
+
+    l_elem_descr ?= cl_abap_typedescr=>describe_by_data( abap_value ).
+    tk = l_elem_descr->type_kind.
+    an = l_elem_descr->absolute_name.
+    ol = l_elem_descr->output_length.
+
+    CASE json_type.
+      WHEN 'string'.
+        l_string = json_value.
+        escape_string l_string.
+        CASE tk.
+          WHEN cl_abap_typedescr=>typekind_xstring OR
+               cl_abap_typedescr=>typekind_hex.
+            string_to_xstring( EXPORTING in = l_string CHANGING out = abap_value ).
+          WHEN cl_abap_typedescr=>typekind_date.
+            FIND FIRST OCCURRENCE OF REGEX '(\d{4})-(\d{2})-(\d{2})' IN json_value
+              SUBMATCHES l_year l_month l_day.
+            IF sy-subrc EQ 0.
+              CONCATENATE l_year l_month l_day INTO abap_value.
+            ENDIF.
+          WHEN cl_abap_typedescr=>typekind_time.
+            FIND FIRST OCCURRENCE OF REGEX '(\d{2}):(\d{2}):(\d{2})' IN json_value
+              SUBMATCHES l_hour l_minute l_second.
+            IF sy-subrc EQ 0.
+              CONCATENATE l_hour l_minute l_second INTO abap_value.
+            ENDIF.
+          WHEN cl_abap_typedescr=>typekind_packed.
+            FIND FIRST OCCURRENCE OF REGEX
+              '(\d{4})-?(\d{2})-?(\d{2})T(\d{2}):?(\d{2}):?(\d{2})(?:[\.,](\d{0,7}))?Z?'
+              IN json_value
+              SUBMATCHES l_year l_month l_day l_hour l_minute l_second l_decimals.
+            IF sy-subrc EQ 0.
+              CONCATENATE l_year l_month l_day
+                          l_hour l_minute l_second '.' l_decimals INTO l_string.
+              MOVE l_string TO abap_value.
+            ENDIF.
+          WHEN OTHERS.
+            MOVE l_string TO abap_value.
+        ENDCASE.
+      WHEN 'boolean'.
+        CASE json_value.
+          WHEN 'true'.
+            abap_value = abap_true.
+          WHEN 'false' OR 'null'. "TODO Manage 3 values boolean
+            abap_value = abap_false.
+        ENDCASE.
+      WHEN 'number'.
+        MOVE json_value TO abap_value.
+    ENDCASE.
+
+  ENDMETHOD.
 
 
 METHOD deserialize.
@@ -141,9 +242,10 @@ ENDMETHOD.
       l_string  TYPE string,
       l_number  TYPE string,
       l_boolean TYPE string,
-      l_value   TYPE string.
+      l_value   TYPE string,
+      l_type    TYPE string.
 
-    FIND REGEX '"([^"]*)"|(\d+)|(true|false)' IN SECTION OFFSET offset OF json
+    FIND REGEX '"([^"]*)"|(^-{1}\d+|^\d+)|(true|false|null)' IN SECTION OFFSET offset OF json
       MATCH OFFSET offset MATCH LENGTH l_len
       SUBMATCHES l_string l_number l_boolean.
     IF sy-subrc <> 0 .
@@ -152,20 +254,22 @@ ENDMETHOD.
 
     CASE json+offset(1) .
       WHEN '"' .
-        l_value = l_string .
+        l_type = 'string'.
+        l_value = l_string.
         ADD l_len TO offset .
-      WHEN 't'.
-        l_value = abap_true.
-      WHEN 'f'.
-        l_value = abap_false.
-      WHEN OTHERS . "0-9
+      WHEN 't' OR 'f' OR 'n'.
+        l_type = 'boolean'.
+        l_value = l_boolean.
+      WHEN OTHERS . "0-9 or negative numbers
+        l_type = 'number'.
         l_value = l_number.
     ENDCASE .
 
     set_node_level(
       EXPORTING
         value = l_value
-        add = abap_true ).
+        type  = l_type
+        add   = abap_true ).
     CLEAR mv_name.
 *   key nodes do not have children
     set_node_level(
@@ -179,7 +283,7 @@ METHOD deserialize_node.
   DATA:
     l_len     TYPE i.
 
-  FIND REGEX '\{|\[|"([^"]*)"|(\d+)|(true|false)'
+  FIND REGEX '\{|\[|"([^"]*)"|(^-{1}\d+|^\d+)|(true|false)'
     IN SECTION OFFSET offset OF json
     MATCH OFFSET offset MATCH LENGTH l_len.
 
@@ -235,7 +339,6 @@ METHOD deserialize_object.
     ADD l_len TO offset.
 *   remove " from l_name
     REPLACE ALL OCCURRENCES OF '"' IN mv_name WITH ''.
-    TRANSLATE mv_name TO UPPER CASE.
 *   deserialize current component
     deserialize_node(
       EXPORTING
@@ -310,6 +413,9 @@ ENDMETHOD.
       LOOP AT l_children INTO l_node.
         l_name = l_node->get_name( ).
         ASSIGN COMPONENT l_name OF STRUCTURE <str> TO <comp>.
+        IF sy-subrc NE 0.
+          zcx_abapfire_json=>raise( 'Invalid ABAP Target' ).
+        ENDIF.
         recurse(
           EXPORTING
             node = l_node
@@ -318,7 +424,12 @@ ENDMETHOD.
       ENDLOOP.
     ELSE.
 *     JSON Hierarchy children are key values
-      comp = node->get_value( ).
+      convert_value_to_abap(
+        EXPORTING
+          json_value = node->get_value( )
+          json_type = node->get_type( )
+        IMPORTING
+          abap_value = comp ).
     ENDIF.
 
   ENDMETHOD.
@@ -351,19 +462,42 @@ ENDMETHOD.
       IF l_parent IS INITIAL.
         CREATE OBJECT l_node
           EXPORTING
-            name  = mv_name
+            name  = convert_name_to_abap( mv_name )
             array = array
-            value = value.
+            value = value
+            type  = type.
       ELSE.
         CREATE OBJECT l_node
           EXPORTING
-            name  = mv_name
+            name  = convert_name_to_abap( mv_name )
             array = array
-            value = value.
+            value = value
+            type  = type.
         l_parent->add_child( l_node ).
       ENDIF.
       CLEAR mv_name.
       APPEND l_node TO mt_nodes_stack.
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD string_to_xstring.
+
+    DATA: l_xstring TYPE xstring.
+
+    CALL FUNCTION 'SSFC_BASE64_DECODE'
+      EXPORTING
+        b64data = in
+      IMPORTING
+        bindata = l_xstring
+      EXCEPTIONS
+        OTHERS  = 1.
+
+    IF sy-subrc IS INITIAL.
+      MOVE l_xstring TO out.
+    ELSE.
+      MOVE in TO out.
     ENDIF.
 
   ENDMETHOD.

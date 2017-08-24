@@ -56,12 +56,15 @@ START-OF-SELECTION.
   TYPES:
 
     BEGIN OF ty_user,
-      name TYPE string,
-      role TYPE string,
+      name          TYPE string,
+      role          TYPE string,
+      first_manager TYPE string,
+      weigth        TYPE i,
     END OF ty_user,
     BEGIN OF ty_task,
       description TYPE string,
       status      TYPE string,
+      due_on      TYPE timestampl,
     END OF ty_task,
     ty_tasks TYPE SORTED TABLE OF ty_task
       WITH UNIQUE DEFAULT KEY,
@@ -83,4 +86,8 @@ START-OF-SELECTION.
     CATCH zcx_abapfire_json.
       WRITE 'JSON ERROR'.
 
+
   ENDTRY.
+
+  READ TABLE lt_abap TRANSPORTING NO FIELDS
+  INDEX 1.

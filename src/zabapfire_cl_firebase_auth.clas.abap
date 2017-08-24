@@ -1,12 +1,12 @@
-CLASS zabapfire_cl_firebase_auth DEFINITION
-  PUBLIC
-  FINAL
-  CREATE PRIVATE .
+class ZABAPFIRE_CL_FIREBASE_AUTH definition
+  public
+  final
+  create private .
 
-  PUBLIC SECTION.
+public section.
 
-    TYPES:
-      BEGIN OF ty_firebase_config,
+  types:
+    BEGIN OF ty_firebase_config,
         apikey            TYPE string,
         authdomain        TYPE string,
         databaseurl       TYPE string,
@@ -15,35 +15,36 @@ CLASS zabapfire_cl_firebase_auth DEFINITION
         messagingsenderid TYPE string,
       END OF ty_firebase_config .
 
-    CLASS-METHODS create
-      IMPORTING
-        !application TYPE REF TO zabapfire_cl_firebase
-      RETURNING
-        VALUE(auth)  TYPE REF TO zabapfire_cl_firebase_auth
-      RAISING
-        zcx_abapfire_firebase .
-    METHODS authenticate_with_email
-      IMPORTING
-        !email    TYPE string
-        !password TYPE string
-      RAISING
-        zcx_abapfire_firebase .
-    METHODS get_token
-      RETURNING
-        VALUE(idtoken) TYPE string .
+  class-methods CREATE
+    importing
+      !APPLICATION type ref to ZABAPFIRE_CL_FIREBASE
+    returning
+      value(AUTH) type ref to ZABAPFIRE_CL_FIREBASE_AUTH
+    raising
+      ZCX_ABAPFIRE_FIREBASE .
+  methods AUTHENTICATE_WITH_EMAIL
+    importing
+      !EMAIL type STRING
+      !PASSWORD type STRING
+    raising
+      ZCX_ABAPFIRE_FIREBASE
+      ZCX_ABAPFIRE_JSON .
+  methods GET_TOKEN
+    returning
+      value(IDTOKEN) type STRING .
   PROTECTED SECTION.
-  PRIVATE SECTION.
+private section.
 
-    CLASS-DATA sref_auth TYPE REF TO zabapfire_cl_firebase_auth .
-    DATA application TYPE REF TO zabapfire_cl_firebase .
-    DATA mv_email TYPE string .
-    DATA mv_password TYPE string .
-    DATA mv_idtoken TYPE string .
-    DATA mv_refreshtoken TYPE string .
+  class-data SREF_AUTH type ref to ZABAPFIRE_CL_FIREBASE_AUTH .
+  data APPLICATION type ref to ZABAPFIRE_CL_FIREBASE .
+  data MV_EMAIL type STRING .
+  data MV_PASSWORD type STRING .
+  data MV_ID_TOKEN type STRING .
+  data MV_REFRESH_TOKEN type STRING .
 
-    METHODS constructor
-      IMPORTING
-        !application TYPE REF TO zabapfire_cl_firebase .
+  methods CONSTRUCTOR
+    importing
+      !APPLICATION type ref to ZABAPFIRE_CL_FIREBASE .
 ENDCLASS.
 
 
@@ -55,19 +56,19 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
 
     TYPES:
       BEGIN OF lty_payload,
-        email             TYPE string,
-        password          TYPE string,
-        returnsecuretoken TYPE string,
+        email               TYPE string,
+        password            TYPE string,
+        return_secure_token TYPE abap_bool,
       END OF lty_payload,
       BEGIN OF lty_response_payload,
-        kind         TYPE string,
-        localid      TYPE string,
-        email        TYPE string,
-        displayname  TYPE string,
-        idtoken      TYPE string,
-        registered   TYPE boolean,
-        refreshtoken TYPE string,
-        expiresin    TYPE string,
+        kind          TYPE string,
+        local_id      TYPE string,
+        email         TYPE string,
+        display_name  TYPE string,
+        id_token      TYPE string,
+        registered    TYPE boolean,
+        refresh_token TYPE string,
+        expires_in    TYPE string,
       END OF lty_response_payload.
 
     DATA: lv_config              TYPE zabapfire_cl_firebase=>ty_firebase_config,
@@ -77,9 +78,7 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
           lv_body                TYPE string,
           lv_url                 TYPE string,
           ls_payload             TYPE lty_payload,
-          lref_json_serializer   TYPE REF TO zabapfire_cl_json_ser_old,
-          ls_entity_attribute    TYPE zabapfire_cl_json_serializer=>ty_entity_attribute,
-          lt_entity_attributes   TYPE zabapfire_cl_json_serializer=>ty_entity_attributes,
+          lref_json_serializer   TYPE REF TO zabapfire_cl_json_serializer,
           lv_response_data       TYPE string,
           lref_json_deserializer TYPE REF TO zabapfire_cl_json_deserializer,
           ls_response_abap       TYPE lty_response_payload,
@@ -133,19 +132,9 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
 *   Build request payload
     ls_payload-email = email.
     ls_payload-password = password.
-    ls_payload-returnsecuretoken = 'true'.
-    ls_entity_attribute-name = 'email'.
-    APPEND ls_entity_attribute TO lt_entity_attributes.
-    ls_entity_attribute-name = 'password'.
-    APPEND ls_entity_attribute TO lt_entity_attributes.
-    ls_entity_attribute-name = 'returnSecureToken'.
-    APPEND ls_entity_attribute TO lt_entity_attributes.
-    CREATE OBJECT lref_json_serializer
-      EXPORTING
-        data              = ls_payload
-        entity_attributes = lt_entity_attributes.
-    lref_json_serializer->serialize( ).
-    lv_body = lref_json_serializer->get_data( ).
+    ls_payload-return_secure_token = abap_true.
+    CREATE OBJECT lref_json_serializer.
+    lv_body = lref_json_serializer->serialize( ls_payload ).
 
     lv_http_client->request->set_cdata( lv_body ).
 
@@ -217,8 +206,8 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
     ENDTRY.
 
 *   Store token
-    mv_idtoken = ls_response_abap-idtoken.
-    mv_refreshtoken = ls_response_abap-refreshtoken.
+    mv_id_token = ls_response_abap-id_token.
+    mv_refresh_token = ls_response_abap-refresh_token.
 
     lv_http_client->close( ).
 
@@ -248,7 +237,7 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
 
   METHOD get_token.
 
-    idtoken = mv_idtoken.
+    idtoken = mv_id_token.
 
   ENDMETHOD.
 ENDCLASS.
