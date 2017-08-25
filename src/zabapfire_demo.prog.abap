@@ -4,7 +4,7 @@
 *&
 *&---------------------------------------------------------------------*
 REPORT zabapfire_demo.
-
+TYPE-POOLS : slis.
 DATA:
   firebase     TYPE REF TO zabapfire_cl_firebase,
   lcx_firebase TYPE REF TO zcx_abapfire_firebase,
@@ -46,8 +46,9 @@ START-OF-SELECTION.
         email = p_email
         password = p_pass ).
     CATCH zcx_abapfire_firebase INTO lcx_firebase.
-      WRITE lcx_firebase->get_text( ).
-
+      MESSAGE i000(zabapfire_msg) WITH lcx_firebase->get_text( )
+        DISPLAY LIKE 'E'.
+      EXIT.
   ENDTRY.
 
 **********************************************************************
@@ -56,10 +57,8 @@ START-OF-SELECTION.
   TYPES:
 
     BEGIN OF ty_user,
-      name          TYPE string,
-      role          TYPE string,
-      first_manager TYPE string,
-      weigth        TYPE i,
+      name TYPE string,
+      role TYPE string,
     END OF ty_user,
     BEGIN OF ty_task,
       description TYPE string,
@@ -69,25 +68,51 @@ START-OF-SELECTION.
     ty_tasks TYPE SORTED TABLE OF ty_task
       WITH UNIQUE DEFAULT KEY,
     BEGIN OF ty_abap.
-          INCLUDE TYPE ty_user.
+      INCLUDE TYPE ty_user.
   TYPES:
     tasks TYPE ty_tasks,
     END OF ty_abap.
+
   DATA:
-          lt_abap TYPE TABLE OF ty_abap.
+    ls_parameters TYPE  zabapfire_cl_firebase_db=>ty_get_parameters,
+    lt_abap       TYPE TABLE OF ty_abap,
+    ls_abap       LIKE LINE OF lt_abap,
+    ls_user       TYPE ty_user,
+    lt_users      TYPE TABLE OF ty_user,
+    ls_fc         TYPE slis_fieldcat_alv,
+    lt_fc         TYPE slis_t_fieldcat_alv.
+
+*  ls_parameters-order_by = 'role'.
   TRY.
       firebase->db->get(
           EXPORTING
           path =  '/users'
+          parameters = ls_parameters
           IMPORTING
           child = lt_abap ).
     CATCH zcx_abapfire_firebase INTO lcx_firebase.
-      WRITE lcx_firebase->get_text( ).
-    CATCH zcx_abapfire_json.
-      WRITE 'JSON ERROR'.
-
-
+      MESSAGE i000(zabapfire_msg) WITH lcx_firebase->get_text( )
+        DISPLAY LIKE 'E'.
+      EXIT.
   ENDTRY.
 
-  READ TABLE lt_abap TRANSPORTING NO FIELDS
-  INDEX 1.
+  LOOP AT lt_abap INTO ls_abap.
+    MOVE-CORRESPONDING ls_abap TO ls_user.
+    APPEND ls_user TO lt_users.
+  ENDLOOP.
+
+  ls_fc-fieldname = 'NAME'.
+  ls_fc-seltext_m = 'User name'.
+  APPEND ls_fc TO lt_fc.
+  ls_fc-fieldname = 'ROLE'.
+  ls_fc-seltext_m = 'Role'.
+  APPEND ls_fc TO lt_fc.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      it_fieldcat   = lt_fc
+    TABLES
+      t_outtab      = lt_abap
+    EXCEPTIONS
+      program_error = 1
+      OTHERS        = 2.

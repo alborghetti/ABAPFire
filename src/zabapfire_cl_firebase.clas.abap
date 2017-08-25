@@ -83,9 +83,7 @@ CLASS ZABAPFIRE_CL_FIREBASE IMPLEMENTATION.
         internal_error     = 3
         OTHERS             = 4.
     IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_abapfire_firebase
-        EXPORTING
-          textid = zcx_abapfire_firebase=>http_connection_error.
+      zcx_abapfire_firebase=>raise( 'HTTP Connection fails' ).
     ENDIF.
 
 *   Create DB Helper

@@ -10,7 +10,9 @@ public section.
       !CODE type I
       !PAYLOAD type STRING
     returning
-      value(RV_MSG) type STRING .
+      value(RV_MSG) type STRING
+    raising
+      ZCX_ABAPFIRE_FIREBASE .
   PROTECTED SECTION.
 private section.
 ENDCLASS.
@@ -21,6 +23,9 @@ CLASS ZABAPFIRE_CL_HTTP_UTIL IMPLEMENTATION.
 
 
   METHOD get_http_error_msg.
+
+    DATA:
+          lcx_exception TYPE REF TO zcx_abapfire_json.
 
     TYPES:
       BEGIN OF ty_error_array,
@@ -43,12 +48,16 @@ CLASS ZABAPFIRE_CL_HTTP_UTIL IMPLEMENTATION.
       lt_response_abap       TYPE ty_response_payload,
       lv_code                TYPE n LENGTH 4.
 
-    CREATE OBJECT lref_json_deserializer.
-    CALL METHOD lref_json_deserializer->deserialize
-      EXPORTING
-        json = payload
-      IMPORTING
-        abap = lt_response_abap.
+    TRY.
+        CREATE OBJECT lref_json_deserializer.
+        CALL METHOD lref_json_deserializer->deserialize
+          EXPORTING
+            json = payload
+          IMPORTING
+            abap = lt_response_abap.
+      CATCH zcx_abapfire_json INTO lcx_exception.
+        zcx_abapfire_firebase=>raise( lcx_exception->get_text( ) ).
+    ENDTRY.
 
     rv_msg = lt_response_abap-error-message.
     lv_code = code.

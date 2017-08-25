@@ -19,16 +19,13 @@ public section.
     importing
       !APPLICATION type ref to ZABAPFIRE_CL_FIREBASE
     returning
-      value(AUTH) type ref to ZABAPFIRE_CL_FIREBASE_AUTH
-    raising
-      ZCX_ABAPFIRE_FIREBASE .
+      value(AUTH) type ref to ZABAPFIRE_CL_FIREBASE_AUTH .
   methods AUTHENTICATE_WITH_EMAIL
     importing
       !EMAIL type STRING
       !PASSWORD type STRING
     raising
-      ZCX_ABAPFIRE_FIREBASE
-      ZCX_ABAPFIRE_JSON .
+      ZCX_ABAPFIRE_FIREBASE .
   methods GET_TOKEN
     returning
       value(IDTOKEN) type STRING .
@@ -82,12 +79,13 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
           lv_response_data       TYPE string,
           lref_json_deserializer TYPE REF TO zabapfire_cl_json_deserializer,
           ls_response_abap       TYPE lty_response_payload,
-          lv_http_status         TYPE i.
+          lv_http_status         TYPE i,
+          lcx_json               TYPE REF TO zcx_abapfire_json.
 
     IF email IS INITIAL OR password IS INITIAL.
-      RAISE EXCEPTION TYPE zcx_abapfire_firebase
-        EXPORTING
-          textid = zcx_abapfire_firebase=>incorrect_authentication_param.
+      zcx_abapfire_firebase=>raise(
+        'Incorrect authentication parameters (email, password)'
+      ).
     ELSE.
       mv_email = email.
       mv_password = password.
@@ -100,10 +98,7 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
         proxy      = lv_proxy
         proxy_port = lv_proxy_port.
     IF lv_config-apikey IS INITIAL.
-      RAISE EXCEPTION TYPE zcx_abapfire_firebase
-        EXPORTING
-          textid                     = zcx_abapfire_firebase=>firebase_config
-          wrong_firebase_config_parm = 'APIKEY'.
+      zcx_abapfire_firebase=>raise( 'Wrong firebase configuration: APIKEY' ).
     ELSE.
       lv_url = 'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key='.
       CONCATENATE lv_url lv_config-apikey
@@ -133,8 +128,12 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
     ls_payload-email = email.
     ls_payload-password = password.
     ls_payload-return_secure_token = abap_true.
-    CREATE OBJECT lref_json_serializer.
-    lv_body = lref_json_serializer->serialize( ls_payload ).
+    TRY.
+        CREATE OBJECT lref_json_serializer.
+        lv_body = lref_json_serializer->serialize( ls_payload ).
+      CATCH zcx_abapfire_json INTO lcx_json.
+        zcx_abapfire_firebase=>raise( lcx_json->get_text( ) ).
+    ENDTRY.
 
     lv_http_client->request->set_cdata( lv_body ).
 
@@ -147,9 +146,7 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
         http_invalid_timeout       = 4
         OTHERS                     = 5.
     IF sy-subrc NE 0.
-      RAISE EXCEPTION TYPE zcx_abapfire_firebase
-        EXPORTING
-          textid = zcx_abapfire_firebase=>http_connection_error.
+      zcx_abapfire_firebase=>raise( 'HTTP Connection fails' ).
     ENDIF.
 
 *   Get response
@@ -159,9 +156,7 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
         http_invalid_state         = 2
         http_processing_failed     = 3.
     IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_abapfire_firebase
-        EXPORTING
-          textid = zcx_abapfire_firebase=>http_connection_error.
+      zcx_abapfire_firebase=>raise( 'HTTP Connection fails' ).
     ENDIF.
 
     lv_response_data = lv_http_client->response->get_cdata( ).
@@ -201,8 +196,8 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
             json = lv_response_data
           IMPORTING
             abap = ls_response_abap.
-      CATCH zcx_abapfire_json.
-        zcx_abapfire_firebase=>raise( 'JSON deserialize error ' ).
+      CATCH zcx_abapfire_json INTO lcx_json.
+        zcx_abapfire_firebase=>raise( lcx_json->get_text( ) ).
     ENDTRY.
 
 *   Store token

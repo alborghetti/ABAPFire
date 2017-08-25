@@ -6,6 +6,16 @@ class ZABAPFIRE_CL_FIREBASE_DB definition
 public section.
 
   types:
+    BEGIN OF ty_get_parameters,
+        shallow        TYPE abap_bool,
+        order_by       TYPE string,
+        start_at       TYPE string,
+        end_at         TYPE string,
+        limit_to_first TYPE string,
+        limit_to_last  TYPE string,
+        equal_to       TYPE string,
+      END OF ty_get_parameters .
+  types:
     BEGIN OF ty_firebase_config,
         apikey            TYPE string,
         authdomain        TYPE string,
@@ -19,17 +29,15 @@ public section.
     importing
       !APPLICATION type ref to ZABAPFIRE_CL_FIREBASE
     returning
-      value(RREF_DB) type ref to ZABAPFIRE_CL_FIREBASE_DB
-    raising
-      ZCX_ABAPFIRE_FIREBASE .
+      value(RREF_DB) type ref to ZABAPFIRE_CL_FIREBASE_DB .
   methods GET
     importing
       !PATH type STRING
+      !PARAMETERS type TY_GET_PARAMETERS optional
     exporting
       value(CHILD) type ANY
     raising
-      ZCX_ABAPFIRE_FIREBASE
-      ZCX_ABAPFIRE_JSON .
+      ZCX_ABAPFIRE_FIREBASE .
 PROTECTED SECTION.
 
 PRIVATE SECTION.
@@ -49,6 +57,7 @@ CLASS ZABAPFIRE_CL_FIREBASE_DB IMPLEMENTATION.
 
 
 METHOD constructor.
+
   me->application = application.
 
 ENDMETHOD.
@@ -70,27 +79,66 @@ ENDMETHOD.
 
   METHOD get.
 
-  DATA:
-          lv_uri                 TYPE string,
-          lv_idtoken             TYPE string,
-          ls_payload             TYPE string,
-          lv_response_data       TYPE string,
-          lv_http_status         TYPE i,
-          lref_json_deserializer TYPE REF TO zabapfire_cl_json_deserializer.
+    DATA:
+      lv_uri                 TYPE string,
+      lv_idtoken             TYPE string,
+      ls_payload             TYPE string,
+      lv_response_data       TYPE string,
+      lv_http_status         TYPE i,
+      lref_json_deserializer TYPE REF TO zabapfire_cl_json_deserializer,
+      l_len                  TYPE i,
+      l_query_delimiter      TYPE c LENGTH 1 VALUE '?',
+      lcx_json               TYPE REF TO zcx_abapfire_json.
 
-  ASSERT CONDITION NOT path IS INITIAL.
+    ASSERT CONDITION NOT path IS INITIAL.
 
     application->get_client( )->request->set_method( 'GET' ).
     application->get_client( )->request->set_content_type('application/json').
+
+    CONCATENATE path '.json' INTO lv_uri.
+
+*   Set parameters
+    IF parameters-shallow = abap_true.
+      CONCATENATE lv_uri l_query_delimiter 'shallow=true'
+        INTO lv_uri.
+      l_query_delimiter = '&'.
+    ENDIF.
+    IF NOT parameters-order_by IS INITIAL.
+      CONCATENATE lv_uri l_query_delimiter 'orderBy="' parameters-order_by '"'
+        INTO lv_uri.
+      l_query_delimiter = '&'.
+    ENDIF.
+    IF NOT parameters-start_at IS INITIAL.
+      CONCATENATE lv_uri l_query_delimiter 'startAt=' parameters-start_at
+        INTO lv_uri.
+      l_query_delimiter = '&'.
+    ENDIF.
+    IF NOT parameters-end_at IS INITIAL.
+      CONCATENATE lv_uri l_query_delimiter 'endAt=' parameters-end_at
+        INTO lv_uri.
+      l_query_delimiter = '&'.
+    ENDIF.
+    IF NOT parameters-limit_to_first IS INITIAL.
+      CONCATENATE lv_uri l_query_delimiter 'limitToFirst=' parameters-limit_to_first
+        INTO lv_uri.
+      l_query_delimiter = '&'.
+    ENDIF.
+    IF NOT parameters-limit_to_last IS INITIAL.
+      CONCATENATE lv_uri l_query_delimiter 'limitToLast=' parameters-limit_to_last
+        INTO lv_uri.
+      l_query_delimiter = '&'.
+    ENDIF.
+    IF NOT parameters-equal_to IS INITIAL.
+      CONCATENATE lv_uri l_query_delimiter 'equalTo=' parameters-equal_to
+        INTO lv_uri.
+      l_query_delimiter = '&'.
+    ENDIF.
 
 *   Get authentication token
     lv_idtoken = application->auth->get_token( ).
 
     IF NOT lv_idtoken IS INITIAL.
-      CONCATENATE path '.json?auth=' lv_idtoken
-        INTO lv_uri.
-        ELSE.
-      CONCATENATE path '.json'
+      CONCATENATE lv_uri l_query_delimiter 'auth=' lv_idtoken
         INTO lv_uri.
     ENDIF.
 
@@ -111,9 +159,7 @@ ENDMETHOD.
         OTHERS                     = 5
         ).
     IF sy-subrc NE 0.
-      RAISE EXCEPTION TYPE zcx_abapfire_firebase
-        EXPORTING
-          textid = zcx_abapfire_firebase=>http_connection_error.
+      zcx_abapfire_firebase=>raise( 'HTTP Connection fails' ).
     ENDIF.
 
 *   Get response
@@ -124,9 +170,7 @@ ENDMETHOD.
         http_processing_failed     = 3
      ).
     IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_abapfire_firebase
-        EXPORTING
-          textid = zcx_abapfire_firebase=>http_connection_error.
+      zcx_abapfire_firebase=>raise( 'HTTP Connection fails' ).
     ENDIF.
 
     lv_response_data = application->get_client( )->response->get_cdata( ).
@@ -159,12 +203,16 @@ ENDMETHOD.
     ENDCASE.
 
 *   Deserialize JSON Payload
-    CREATE OBJECT lref_json_deserializer.
-    CALL METHOD lref_json_deserializer->deserialize
-      EXPORTING
-        json = lv_response_data
-      IMPORTING
-        abap = child.
+    TRY.
+        CREATE OBJECT lref_json_deserializer.
+        CALL METHOD lref_json_deserializer->deserialize
+          EXPORTING
+            json = lv_response_data
+          IMPORTING
+            abap = child.
+      CATCH zcx_abapfire_json INTO lcx_json.
+        zcx_abapfire_firebase=>raise( lcx_json->get_text( ) ).
+    ENDTRY.
 
   ENDMETHOD.
 ENDCLASS.

@@ -161,10 +161,10 @@ CLASS ZABAPFIRE_CL_JSON_DESERIALIZER IMPLEMENTATION.
             IF sy-subrc EQ 0.
               CONCATENATE l_year l_month l_day
                           l_hour l_minute l_second '.' l_decimals INTO l_string.
-              MOVE l_string TO abap_value.
+              abap_value = l_string.
             ENDIF.
           WHEN OTHERS.
-            MOVE l_string TO abap_value.
+            abap_value = l_string.
         ENDCASE.
       WHEN 'boolean'.
         CASE json_value.
@@ -174,7 +174,7 @@ CLASS ZABAPFIRE_CL_JSON_DESERIALIZER IMPLEMENTATION.
             abap_value = abap_false.
         ENDCASE.
       WHEN 'number'.
-        MOVE json_value TO abap_value.
+        abap_value = json_value.
     ENDCASE.
 
   ENDMETHOD.
@@ -245,7 +245,9 @@ ENDMETHOD.
       l_value   TYPE string,
       l_type    TYPE string.
 
-    FIND REGEX '"([^"]*)"|(^-{1}\d+|^\d+)|(true|false|null)' IN SECTION OFFSET offset OF json
+    FIND REGEX
+      '"((?:\\"|(?!").)+)"|(-{1}\d+|\d+)|(true|false|null)'
+      IN SECTION OFFSET offset OF json
       MATCH OFFSET offset MATCH LENGTH l_len
       SUBMATCHES l_string l_number l_boolean.
     IF sy-subrc <> 0 .
@@ -283,7 +285,14 @@ METHOD deserialize_node.
   DATA:
     l_len     TYPE i.
 
-  FIND REGEX '\{|\[|"([^"]*)"|(^-{1}\d+|^\d+)|(true|false)'
+  FIND REGEX
+    '\{|\[|"((?:\\"|(?!").)+)"|(-{1}\d+|\d+)|(true|false)'
+    " (\{)                          --> capturing group 1 {
+    " (\[)                          --> capturing group 2 [
+    " (["]((?:\\"|(?!").)+)")       --> capturing group 3 strings
+    " (-{1}\d+|\d+)                 --> capturing group 4 numbers
+    " (true|false)                  --> capturing group 5 booleans
+
     IN SECTION OFFSET offset OF json
     MATCH OFFSET offset MATCH LENGTH l_len.
 
@@ -330,11 +339,11 @@ METHOD deserialize_object.
 * handle each component
   WHILE l_done = abap_false .
     "find next key ("key":)
-    FIND REGEX '("[^"]+")\s*:' IN SECTION OFFSET offset OF json
+    FIND REGEX '"((?:\\"|(?!").)+)"\s*:' IN SECTION OFFSET offset OF json
       MATCH OFFSET offset MATCH LENGTH l_len
       SUBMATCHES mv_name.
     IF sy-subrc <> 0 .
-      RAISE EXCEPTION TYPE cx_trex_serialization .
+      zcx_abapfire_json=>raise( 'Invalid JSON' ).
     ENDIF .
     ADD l_len TO offset.
 *   remove " from l_name
@@ -424,12 +433,16 @@ ENDMETHOD.
       ENDLOOP.
     ELSE.
 *     JSON Hierarchy children are key values
-      convert_value_to_abap(
-        EXPORTING
-          json_value = node->get_value( )
-          json_type = node->get_type( )
-        IMPORTING
-          abap_value = comp ).
+      TRY.
+          convert_value_to_abap(
+            EXPORTING
+              json_value = node->get_value( )
+              json_type = node->get_type( )
+            IMPORTING
+              abap_value = comp ).
+        CATCH cx_sy_conversion_error.
+          zcx_abapfire_json=>raise( 'Invalid ABAP Target' ).
+      ENDTRY.
     ENDIF.
 
   ENDMETHOD.
