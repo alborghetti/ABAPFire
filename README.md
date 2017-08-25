@@ -49,7 +49,7 @@ TRY.
   ENDTRY.
 ```
 ### Retrieve firebase data ###
-
+```
   TRY.
       firebase->db->get(
           EXPORTING
@@ -59,4 +59,4 @@ TRY.
     CATCH zcx_abapfire_firebase INTO lcx_firebase.
       WRITE lcx_firebase->get_text( ).
   ENDTRY.
-
+```
