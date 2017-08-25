@@ -32,7 +32,8 @@ DATA:
   ls_config-storagebucket = '[your storagebucket]'.
 
   firebase = zabapfire_cl_firebase=>initialize_app( ls_config ).
-  ```
+  ``` 
+  
   ### Authenticate user ###
   
   The library support only email and password authentication:
@@ -48,7 +49,9 @@ TRY.
 
   ENDTRY.
 ```
+
 ### Retrieve firebase data ###
+
 ```
   TRY.
       firebase->db->get(
