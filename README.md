@@ -3,7 +3,7 @@ ABAP Firebase REST API Helper Library
 
 ## Installation ##
 
-### Install it using abapGit ##
+### Clone it using abapGit ##
 
 Install [abapGit](http://larshp.github.io/abapGit/guide-install.html), then clone the repository in a pacakge (e.g $ABAPFIRE).
 
@@ -15,7 +15,7 @@ Install Root CA from [Google Internet Authority G2](https://pki.google.com/) usi
 
 Program ZABAPFIRE_DEMO provides usage examples.
 
-### Initialize application ###
+### Initialize the Application ###
 
 To initialize the library, just pass to it your firebase configuration:
 
@@ -32,13 +32,13 @@ DATA:
   ls_config-storagebucket = '[your storagebucket]'.
 
   firebase = zabapfire_cl_firebase=>initialize_app( ls_config ).
-  ``` 
+``` 
   
-  ### Authenticate user ###
+### User Authentication ###
   
-  The library support only email and password authentication:
+The library support only email and password authentication:
   
-  ```
+```
 TRY.
       firebase->auth->authenticate_with_email(
         EXPORTING
