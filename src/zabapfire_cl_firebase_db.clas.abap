@@ -197,6 +197,7 @@ ENDMETHOD.
           zabapfire_cl_http_util=>get_http_error_msg(
             EXPORTING
             code = lv_http_status
+            api = 'firebase'
             payload = lv_response_data )
         ).
 
