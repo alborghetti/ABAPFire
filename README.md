@@ -1,3 +1,6 @@
+![Tested SAP relaase: ABAP 740 SP9](https://img.shields.io/badge/ABAP-740%20SP9-green.svg?style=flat)
+![Completion 55%](https://img.shields.io/badge/Completion-55%25-yellow.svg?style=flat)
+
 # ABAPFire #
 ABAP Firebase REST API Helper Library
 
