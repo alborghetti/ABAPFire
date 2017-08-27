@@ -8,7 +8,7 @@ ABAP Firebase REST API Helper Library
 
 ### Clone it using abapGit ##
 
-Install [abapGit](http://larshp.github.io/abapGit/guide-install.html), then clone the repository in a pacakge (e.g $ABAPFIRE).
+Install [abapGit](http://larshp.github.io/abapGit/guide-install.html), then clone the repository in a package (e.g $ABAPFIRE).
 
 ### Install Google certificate ###
 
