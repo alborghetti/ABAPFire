@@ -11,6 +11,8 @@
     <item>/README.md</item>
     <item>/package.json</item>
     <item>/.travis.yml</item>
+    <item>/_config.yml</item>
+    <item>/docs/img/retrieve_keys.JPG</item>
    </IGNORE>
   </DATA>
  </asx:values>
