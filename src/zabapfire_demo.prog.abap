@@ -12,7 +12,12 @@ DATA:
 
 PARAMETERS:
   p_email TYPE string LOWER CASE,
-  p_pass  TYPE string LOWER CASE.
+  p_pass  TYPE string LOWER CASE,
+  p_path  TYPE  string LOWER CASE DEFAULT '/flights' OBLIGATORY,
+  p_get   TYPE char1 RADIOBUTTON GROUP rb1 DEFAULT 'X',
+  p_set   TYPE char1 RADIOBUTTON GROUP rb1,
+  p_push  TYPE char1 RADIOBUTTON GROUP rb1,
+  p_del   TYPE char1 RADIOBUTTON GROUP rb1.
 
 AT SELECTION-SCREEN OUTPUT.
 
@@ -55,57 +60,84 @@ START-OF-SELECTION.
 * Get data
 **********************************************************************
   TYPES:
-
-    BEGIN OF ty_user,
-      name TYPE string,
-      role TYPE string,
-    END OF ty_user,
-    BEGIN OF ty_task,
-      description TYPE string,
-      status      TYPE string,
-      due_on      TYPE timestampl,
-    END OF ty_task,
-    ty_tasks TYPE SORTED TABLE OF ty_task
-      WITH UNIQUE DEFAULT KEY,
-    BEGIN OF ty_abap.
-      INCLUDE TYPE ty_user.
+      BEGIN OF ty_abap,
+        $key        TYPE string.
+          INCLUDE STRUCTURE sflight.
   TYPES:
-    tasks TYPE ty_tasks,
-    END OF ty_abap.
-
+     END OF ty_abap.
   DATA:
     ls_parameters TYPE  zabapfire_cl_firebase_db=>ty_get_parameters,
     lt_abap       TYPE TABLE OF ty_abap,
-    ls_abap       LIKE LINE OF lt_abap,
-    ls_user       TYPE ty_user,
-    lt_users      TYPE TABLE OF ty_user,
     ls_fc         TYPE slis_fieldcat_alv,
     lt_fc         TYPE slis_t_fieldcat_alv.
 
-*  ls_parameters-order_by = 'role'.
-  TRY.
-      firebase->db->get(
+  FIELD-SYMBOLS:
+    <ls_abap>     TYPE ty_abap.
+
+  IF p_get = abap_true.
+    TRY.
+        ls_parameters-order_by = 'carrid'.
+        ls_parameters-equal_to = 'AC'.
+        firebase->db->get(
+            EXPORTING
+            path =  p_path
+            parameters = ls_parameters
+            IMPORTING
+            child = lt_abap ).
+      CATCH zcx_abapfire_firebase INTO lcx_firebase.
+        MESSAGE i000(zabapfire_msg) WITH lcx_firebase->get_text( )
+          DISPLAY LIKE 'E'.
+        EXIT.
+    ENDTRY.
+  ELSEIF p_del = abap_true.
+    TRY.
+        firebase->db->remove(
           EXPORTING
-          path =  '/users'
-          parameters = ls_parameters
-          IMPORTING
-          child = lt_abap ).
-    CATCH zcx_abapfire_firebase INTO lcx_firebase.
-      MESSAGE i000(zabapfire_msg) WITH lcx_firebase->get_text( )
-        DISPLAY LIKE 'E'.
-      EXIT.
-  ENDTRY.
+            path =  p_path ).
+      CATCH zcx_abapfire_firebase INTO lcx_firebase.
+        MESSAGE i000(zabapfire_msg) WITH lcx_firebase->get_text( )
+          DISPLAY LIKE 'E'.
+        EXIT.
+    ENDTRY.
+  ELSE.
+    SELECT * FROM sflight
+      INTO CORRESPONDING FIELDS OF TABLE lt_abap.
+    IF p_set = abap_true.
+      TRY.
+          firebase->db->set(
+            EXPORTING
+              path =  p_path
+              child = lt_abap ).
+        CATCH zcx_abapfire_firebase INTO lcx_firebase.
+          MESSAGE i000(zabapfire_msg) WITH lcx_firebase->get_text( )
+            DISPLAY LIKE 'E'.
+          EXIT.
+      ENDTRY.
+    ELSE.
+      TRY.
+          LOOP AT lt_abap ASSIGNING <ls_abap>.
+            <ls_abap>-$key = firebase->db->push(
+               EXPORTING
+                 path =  p_path
+                 child = <ls_abap> ).
+          ENDLOOP.
+        CATCH zcx_abapfire_firebase INTO lcx_firebase.
+          MESSAGE i000(zabapfire_msg) WITH lcx_firebase->get_text( )
+            DISPLAY LIKE 'E'.
+          EXIT.
+      ENDTRY.
+    ENDIF.
+  ENDIF.
 
-  LOOP AT lt_abap INTO ls_abap.
-    MOVE-CORRESPONDING ls_abap TO ls_user.
-    APPEND ls_user TO lt_users.
-  ENDLOOP.
+  CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+    EXPORTING
+      i_structure_name = 'SFLIGHT'
+    CHANGING
+      ct_fieldcat      = lt_fc.
 
-  ls_fc-fieldname = 'NAME'.
-  ls_fc-seltext_m = 'User name'.
-  APPEND ls_fc TO lt_fc.
-  ls_fc-fieldname = 'ROLE'.
-  ls_fc-seltext_m = 'Role'.
+  ls_fc-fieldname = '$KEY'.
+  ls_fc-seltext_m = 'Firebase key'.
+  ls_fc-lowercase = abap_true.
   APPEND ls_fc TO lt_fc.
 
   CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'

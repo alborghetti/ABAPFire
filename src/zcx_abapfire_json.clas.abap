@@ -45,7 +45,6 @@ endif.
 
 
   METHOD raise.
-    DATA lv_text LIKE if_t100_message=>t100key.
 
     DATA: BEGIN OF lv_msg,
             msgid TYPE symsgid VALUE 'ZABAPFIRE_MSG',

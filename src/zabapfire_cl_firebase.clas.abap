@@ -83,7 +83,8 @@ CLASS ZABAPFIRE_CL_FIREBASE IMPLEMENTATION.
         internal_error     = 3
         OTHERS             = 4.
     IF sy-subrc <> 0.
-      zcx_abapfire_firebase=>raise( 'HTTP Connection fails' ).
+      zcx_abapfire_firebase=>raise(
+        'HTTP Connection fails' ).                          "#EC NOTEXT
     ENDIF.
 
 *   Create DB Helper

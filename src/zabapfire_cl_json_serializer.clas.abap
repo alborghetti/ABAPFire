@@ -22,7 +22,6 @@ private section.
 
   class-data C_COLON type STRING .
   class-data C_COMMA type STRING .
-  constants C_BOOL_TYPES type STRING value `\TYPE-POOL=ABAP\TYPE=ABAP_BOOL\TYPE=BOOLEAN\TYPE=BOOLE_D\TYPE=XFELD` ##NO_TEXT.
   data:
     mt_lines TYPE TABLE OF string .
   data JSON_HIERARCHY type ref to ZABAPFIRE_CL_JSON_NODE .
@@ -45,21 +44,6 @@ private section.
       !NODE type ref to ZABAPFIRE_CL_JSON_NODE
     raising
       ZCX_ABAPFIRE_JSON .
-  methods CONVERT_NAME_TO_JSON
-    importing
-      !ABAP_NAME type STRING
-    returning
-      value(JSON_NAME) type STRING .
-  methods CONVERT_VALUE_TO_JSON
-    importing
-      !ABAP_VALUE type ANY
-    returning
-      value(JSON_VALUE) type STRING .
-  methods XSTRING_TO_STRING
-    importing
-      !IN type ANY
-    returning
-      value(OUT) type STRING .
 ENDCLASS.
 
 
@@ -79,158 +63,15 @@ method CLASS_CONSTRUCTOR.
 endmethod.
 
 
-  METHOD convert_name_to_json.
-    DATA: tokens TYPE TABLE OF char128.
-
-    FIELD-SYMBOLS:
-                   <token> TYPE any.
-
-    CHECK NOT abap_name IS INITIAL.
-
-    json_name = abap_name.
-
-    TRANSLATE json_name TO LOWER CASE.
-*    TRANSLATE json_name USING `/_:_~_`.
-
-    SPLIT json_name AT `_` INTO TABLE tokens.
-    LOOP AT tokens ASSIGNING <token> FROM 2.
-      TRANSLATE <token>(1) TO UPPER CASE.
-    ENDLOOP.
-
-    CONCATENATE LINES OF tokens INTO json_name.
-
-  ENDMETHOD.
-
-
-  METHOD convert_value_to_json.
-    DATA: l_elem_descr TYPE REF TO cl_abap_elemdescr,
-          tk           LIKE l_elem_descr->type_kind,
-          an           LIKE l_elem_descr->absolute_name,
-          ol           LIKE l_elem_descr->output_length.
-
-    DEFINE escape_string.
-      REPLACE ALL OCCURRENCES OF `\` IN &1 WITH `\\`.
-      REPLACE ALL OCCURRENCES OF `"` IN &1 WITH `\"`.
-    END-OF-DEFINITION.
-
-    l_elem_descr ?= cl_abap_typedescr=>describe_by_data( abap_value ).
-    tk = l_elem_descr->type_kind.
-    an = l_elem_descr->absolute_name.
-    ol = l_elem_descr->output_length.
-
-    CASE tk.
-      WHEN cl_abap_typedescr=>typekind_float  OR
-           cl_abap_typedescr=>typekind_int    OR
-           cl_abap_typedescr=>typekind_int1   OR
-           cl_abap_typedescr=>typekind_int2   OR
-           cl_abap_typedescr=>typekind_packed OR
-           `8`. "typekind_int8 -> '8' only from 7.40.
-        IF tk EQ cl_abap_typedescr=>typekind_packed AND
-           an CP `\TYPE=TIMESTAMP*`.
-          IF abap_value IS INITIAL.
-            json_value = `""`.
-          ELSE.
-            MOVE abap_value TO json_value.
-            IF an EQ `\TYPE=TIMESTAMP`.
-              CONCATENATE `"` json_value(4)
-                          `-` json_value+4(2)
-                          `-` json_value+6(2)
-                          `T` json_value+8(2)
-                          `:` json_value+10(2)
-                          `:` json_value+12(2)
-                          `.0000000Z"` INTO json_value.
-            ELSEIF an EQ `\TYPE=TIMESTAMPL`.
-              CONCATENATE `"` json_value(4)
-                          `-` json_value+4(2)
-                          `-` json_value+6(2)
-                          `T` json_value+8(2)
-                          `:` json_value+10(2)
-                          `:` json_value+12(2)
-                          `.` json_value+15(7) `Z"` INTO json_value.
-            ENDIF.
-          ENDIF.
-        ELSEIF abap_value IS INITIAL.
-          json_value = `0`.
-        ELSE.
-          MOVE abap_value TO json_value.
-          IF abap_value LT 0.
-            IF tk <> cl_abap_typedescr=>typekind_float. "float: sign is already at the beginning
-              SHIFT json_value RIGHT CIRCULAR.
-            ENDIF.
-          ELSE.
-            CONDENSE json_value.
-          ENDIF.
-        ENDIF.
-      WHEN cl_abap_typedescr=>typekind_num.
-        IF abap_value IS INITIAL.
-          json_value = `0`.
-        ELSE.
-          MOVE abap_value TO json_value.
-          SHIFT json_value LEFT DELETING LEADING ` 0`.
-        ENDIF.
-      WHEN cl_abap_typedescr=>typekind_string OR
-           cl_abap_typedescr=>typekind_csequence OR
-           cl_abap_typedescr=>typekind_clike.
-        IF abap_value IS INITIAL.
-          json_value = `""`.
-        ELSE.
-          MOVE abap_value TO json_value.
-          escape_string json_value.
-          CONCATENATE `"` json_value `"` INTO json_value.
-        ENDIF.
-      WHEN cl_abap_typedescr=>typekind_xstring OR
-           cl_abap_typedescr=>typekind_hex.
-        IF abap_value IS INITIAL.
-          json_value = `""`.
-        ELSE.
-          json_value = xstring_to_string( abap_value ).
-          escape_string json_value.
-          CONCATENATE `"` json_value `"` INTO json_value.
-        ENDIF.
-      WHEN cl_abap_typedescr=>typekind_char.
-        IF ol EQ 1 AND c_bool_types CS an.
-          IF abap_value EQ abap_true.
-            json_value = `true`.                            "#EC NOTEXT
-          ELSE.
-            json_value = `false`.                           "#EC NOTEXT
-          ENDIF.
-        ELSE.
-          MOVE abap_value TO json_value.
-          escape_string json_value.
-          CONCATENATE `"` json_value `"` INTO json_value.
-        ENDIF.
-      WHEN cl_abap_typedescr=>typekind_date.
-        MOVE abap_value TO json_value.
-        CONCATENATE `"` json_value(4)
-                    `-` json_value+4(2)
-                    `-` json_value+6(2) `"` INTO json_value.
-      WHEN cl_abap_typedescr=>typekind_time.
-        MOVE abap_value TO json_value.
-        CONCATENATE `"` json_value(2)
-                    `:` json_value+2(2)
-                    `:` json_value+4(2) `"` INTO json_value.
-      WHEN OTHERS.
-        IF abap_value IS INITIAL.
-          json_value = `null`.                              "#EC NOTEXT
-        ELSE.
-          MOVE abap_value TO json_value.
-        ENDIF.
-    ENDCASE.
-
-  ENDMETHOD.
-
-
 METHOD recurse.
 
   DATA:
-    l_children   TYPE zabapfire_cl_json_node=>ty_nodes,
     l_node       TYPE REF TO zabapfire_cl_json_node,
     l_abap_type  TYPE REF TO cl_abap_typedescr,
     l_abap_stru  TYPE REF TO cl_abap_structdescr,
-    l_component  TYPE cl_abap_structdescr=>component,
-    l_components TYPE cl_abap_structdescr=>component_table,
-    l_name       TYPE string,
-    l_data       TYPE REF TO data.
+    l_component  TYPE abap_compdescr,
+    l_rec        TYPE REF TO data,
+    l_name       TYPE string.
   FIELD-SYMBOLS:
     <tab>  TYPE ANY TABLE,
     <str>  TYPE any,
@@ -239,15 +80,21 @@ METHOD recurse.
   l_abap_type = cl_abap_typedescr=>describe_by_data( comp ).
 
 * Create current node
+  CHECK NOT name CA '$#[]/'. "In case ABAP strucutre contains a $KEY
+
+  IF NOT name IS INITIAL.
+    l_name = zabapfire_cl_http_util=>abap_lcc( name ).
+    CONCATENATE '"' l_name '"' INTO l_name.
+  ENDIF.
   IF l_abap_type->kind = cl_abap_typedescr=>kind_table.
     CREATE OBJECT l_node
       EXPORTING
-        name  = convert_name_to_json( name )
+        name  = l_name
         array = abap_true.
   ELSE.
     CREATE OBJECT l_node
       EXPORTING
-        name = convert_name_to_json( name ).
+        name = l_name.
   ENDIF.
 * Add node to father if it exists
   IF node IS BOUND.
@@ -258,36 +105,36 @@ METHOD recurse.
     json_hierarchy = l_node.
   ENDIF.
 
-
 * Iterate on ABAP and build JSON Hierarchy
   IF l_abap_type->kind = cl_abap_typedescr=>kind_table.
 *   ABAP Table
-    ASSIGN comp->* TO <tab>.
-    CREATE DATA l_data LIKE LINE OF <tab>.
-    ASSIGN l_data TO <str>.
+    ASSIGN comp TO <tab>.
+    CREATE DATA l_rec LIKE LINE OF <tab>.
+    ASSIGN l_rec->* TO <str>.
     LOOP AT <tab> INTO <str>.
       recurse(
         EXPORTING
           comp = <str>
         CHANGING
           node = l_node ).
-      INSERT <str> INTO TABLE <tab>.
     ENDLOOP.
   ELSEIF l_abap_type->kind = cl_abap_typedescr=>kind_struct.
 *   ABAP Structure
     l_abap_stru ?= cl_abap_typedescr=>describe_by_data( comp ).
-    l_components = l_abap_stru->get_components( ).
-    LOOP AT l_components INTO l_component.
-      ASSIGN COMPONENT l_component-name OF STRUCTURE comp TO <comp>.
+    LOOP AT l_abap_stru->components INTO l_component.
+      l_name = l_component-name.
+      ASSIGN COMPONENT l_name OF STRUCTURE comp TO <comp>.
       recurse(
         EXPORTING
           comp = <comp>
-          name = l_component-name
+          name = l_name
         CHANGING
           node = l_node ).
     ENDLOOP.
   ELSE.
-    l_node->set_value( convert_value_to_json( comp ) ).
+    l_node->set_value(
+      zabapfire_cl_http_util=>serialize_value( comp )
+    ).
   ENDIF.
 
 ENDMETHOD.
@@ -361,27 +208,6 @@ ENDMETHOD.
     recurse_json( json_hierarchy ).
 
     CONCATENATE LINES OF mt_lines INTO json .
-
-  ENDMETHOD.
-
-
-  METHOD XSTRING_TO_STRING.
-
-    DATA: l_xstring TYPE xstring.
-
-    l_xstring = in.
-
-    CALL FUNCTION 'SSFC_BASE64_ENCODE'
-      EXPORTING
-        bindata = l_xstring
-      IMPORTING
-        b64data = out
-      EXCEPTIONS
-        OTHERS  = 1.
-
-    IF sy-subrc IS NOT INITIAL.
-      MOVE in TO out.
-    ENDIF.
 
   ENDMETHOD.
 ENDCLASS.

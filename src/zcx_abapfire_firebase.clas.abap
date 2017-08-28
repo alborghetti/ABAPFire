@@ -45,7 +45,6 @@ endif.
 
 
   METHOD raise.
-    DATA lv_text LIKE if_t100_message=>t100key.
 
     DATA: BEGIN OF lv_msg,
             msgid TYPE symsgid VALUE 'ZABAPFIRE_MSG',
@@ -60,5 +59,6 @@ endif.
       EXPORTING
         textid      = lv_msg
         raise_attr1 = iv_text.
+
   ENDMETHOD.
 ENDCLASS.
