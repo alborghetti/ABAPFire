@@ -33,12 +33,12 @@ START-OF-SELECTION.
 **********************************************************************
 * Initialize App
 **********************************************************************
-  ls_config-apikey = 'AIzaSyCWOrr40bNNP-7yWDGgdDcpfWHRd7ZGG50'.
-  ls_config-authdomain = 'abap-test-825b8.firebaseapp.com'.
-  ls_config-databaseurl = 'https://abap-test-825b8.firebaseio.com'.
-  ls_config-messagingsenderid = 'abap-test-825b8'.
-  ls_config-projectid = 'abap-test-825b8.appspot.com'.
-  ls_config-storagebucket = '686267099123'.
+  ls_config-apikey = '[your_apikey]'.
+  ls_config-authdomain = '[your_authdomain]'.
+  ls_config-databaseurl = '[your_databaseurl]'.
+  ls_config-messagingsenderid = '[your_messagingsenderid]'.
+  ls_config-projectid = '[your_projectid]'.
+  ls_config-storagebucket = '[your_storagebucket]'.
 
   firebase = zabapfire_cl_firebase=>initialize_app( ls_config ).
 
@@ -61,9 +61,17 @@ START-OF-SELECTION.
 **********************************************************************
   TYPES:
       BEGIN OF ty_abap,
-        $key        TYPE string.
-          INCLUDE STRUCTURE sflight.
-  TYPES:
+        $key        TYPE string,
+        carrid      TYPE s_carr_id,
+        connid      TYPE s_conn_id,
+        fldate      TYPE s_date,
+        planetype   TYPE s_planetye,
+        deptime     TYPE s_dep_time,
+        cityfrom    TYPE s_from_cit,
+        airpfrom    TYPE s_fromairp,
+        cityto      TYPE s_to_city,
+        airpto      TYPE s_toairp,
+        carrname    TYPE s_carrname,
      END OF ty_abap.
   DATA:
     ls_parameters TYPE  zabapfire_cl_firebase_db=>ty_get_parameters,
@@ -100,8 +108,23 @@ START-OF-SELECTION.
         EXIT.
     ENDTRY.
   ELSE.
-    SELECT * FROM sflight
+    SELECT
+      sflight~carrid AS carrid
+      sflight~connid AS connid
+      sflight~fldate AS fldate
+      sflight~planetype AS planetype
+      spfli~deptime AS deptime
+      spfli~cityfrom AS cityfrom
+      spfli~airpfrom AS airpfrom
+      spfli~cityto AS cityto
+      spfli~airpto AS airpto
+      scarr~carrname AS carrname
+      FROM sflight
+      INNER JOIN spfli ON spfli~carrid = sflight~carrid AND
+                          spfli~connid = sflight~connid
+      INNER JOIN scarr ON scarr~carrid = sflight~carrid
       INTO CORRESPONDING FIELDS OF TABLE lt_abap.
+
     IF p_set = abap_true.
       TRY.
           firebase->db->set(

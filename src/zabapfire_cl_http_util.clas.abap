@@ -331,8 +331,9 @@ CLASS ZABAPFIRE_CL_HTTP_UTIL IMPLEMENTATION.
       WHEN cl_abap_typedescr=>typekind_date.
         MOVE abap_value TO json_value.
         CONCATENATE `"` json_value(4)
-                    `-` json_value+4(2)
-                    `-` json_value+6(2) `"` INTO json_value.
+                          `-` json_value+4(2)
+                          `-` json_value+6(2)
+                          `T00:00:00.0000000Z"` INTO json_value.
       WHEN cl_abap_typedescr=>typekind_time.
         MOVE abap_value TO json_value.
         CONCATENATE `"` json_value(2)
