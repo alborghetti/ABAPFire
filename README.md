@@ -21,7 +21,7 @@ Program [ZABAPFIRE_DEMO](src/zabapfire_demo.prog.abap) provides usage examples.
 
 To initialize the library, just pass to it your firebase configuration:
 
-```
+```abap
 DATA:
   firebase     TYPE REF TO zabapfire_cl_firebase,
   ls_config    TYPE zabapfire_cl_firebase=>ty_firebase_config.
@@ -40,7 +40,7 @@ DATA:
   
 The library support only email and password authentication:
   
-```
+```abap
 TRY.
       firebase->auth->authenticate_with_email(
         EXPORTING
@@ -54,7 +54,7 @@ TRY.
 
 ### Retrieve firebase data ###
 
-```
+```abap
 TRY.
     ls_parameters-order_by = 'carrid'.
     ls_parameters-equal_to = 'AC'.
@@ -74,7 +74,7 @@ ENDTRY.
 
 If your target ABAP structure contains a column with name $KEY, firebase generated unique keys are saved in this column:
 
-```
+```abap
  TYPES:
       BEGIN OF ty_abap,
         $key        TYPE string.
@@ -102,7 +102,7 @@ Refer to official [firebase documentation](https://firebase.google.com/docs/data
 Writes data to firebase Database location.
 This will overwrite any data at this location and all child locations.
 
-```
+```abap
 SELECT * FROM sflight
 INTO CORRESPONDING FIELDS OF TABLE lt_abap.
 TRY.
@@ -122,7 +122,7 @@ ENDTRY.
 As opposed to the set( ) method, update( ) can be use to selectively update only the referenced properties at the current location (instead of replacing all the child properties at the current location).
 
 
-```
+```abap
 TRY.
     firebase->db->update(
       EXPORTING
@@ -139,7 +139,7 @@ ENDTRY.
 
 Generates a new child location using a unique key and return the generated unique key.
 
-```
+```abap
 TRY.
     LOOP AT lt_abap ASSIGNING <ls_abap>.
       <ls_abap>-$key = firebase->db->push(
@@ -158,7 +158,7 @@ ENDTRY.
 
 Removes the data at this firebase Database location.
 
-```
+```abap
 TRY.
     firebase->db->remove(
       EXPORTING
