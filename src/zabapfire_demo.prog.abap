@@ -40,7 +40,13 @@ START-OF-SELECTION.
   ls_config-projectid = '[your_projectid]'.
   ls_config-storagebucket = '[your_storagebucket]'.
 
-  firebase = zabapfire_cl_firebase=>initialize_app( ls_config ).
+  TRY.
+      firebase = zabapfire_cl_firebase=>initialize_app( ls_config ).
+    CATCH zcx_abapfire_firebase INTO lcx_firebase.
+      MESSAGE i000(zabapfire_msg) WITH lcx_firebase->get_text( )
+        DISPLAY LIKE 'E'.
+      EXIT.
+  ENDTRY.
 
 **********************************************************************
 * Authenticate
@@ -152,15 +158,15 @@ START-OF-SELECTION.
     ENDIF.
   ENDIF.
 
-  CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
-    EXPORTING
-      i_structure_name = 'SFLIGHT'
-    CHANGING
-      ct_fieldcat      = lt_fc.
-
   ls_fc-fieldname = '$KEY'.
   ls_fc-seltext_m = 'Firebase key'.
   ls_fc-lowercase = abap_true.
+  APPEND ls_fc TO lt_fc. CLEAR ls_fc.
+  ls_fc-fieldname = 'CARRID'.
+  ls_fc-seltext_m = 'Carrier Id'.
+  APPEND ls_fc TO lt_fc.
+  ls_fc-fieldname = 'CONNID'.
+  ls_fc-seltext_m = 'Connection Id'.
   APPEND ls_fc TO lt_fc.
 
   CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
