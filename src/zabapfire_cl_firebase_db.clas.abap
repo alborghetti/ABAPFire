@@ -170,7 +170,7 @@ ENDMETHOD.
 
     application->get_client( )->request->set_method( 'GET' ).
     application->get_client( )->request->set_content_type(
-                                                  'application/json').
+                                                  'application/json' ).
 
     CONCATENATE path '.json' INTO lv_uri.
 
@@ -297,7 +297,7 @@ ENDMETHOD.
 
     application->get_client( )->request->set_method( 'POST' ).
     application->get_client( )->request->set_content_type(
-                                                  'application/json').
+                                                  'application/json' ).
 
     CONCATENATE path '.json' INTO lv_uri.
 
@@ -523,7 +523,7 @@ ENDMETHOD.
 
     application->get_client( )->request->set_method( 'PUT' ).
     application->get_client( )->request->set_content_type(
-                                                  'application/json').
+                                                  'application/json' ).
 
     CONCATENATE path '.json' INTO lv_uri.
 
@@ -634,7 +634,7 @@ ENDMETHOD.
 
     application->get_client( )->request->set_method( 'PATCH' ).
     application->get_client( )->request->set_content_type(
-                                                  'application/json').
+                                                  'application/json' ).
 
     CONCATENATE path '.json' INTO lv_uri.
 

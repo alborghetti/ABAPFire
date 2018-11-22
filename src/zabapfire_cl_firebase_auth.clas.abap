@@ -128,7 +128,7 @@ CLASS ZABAPFIRE_CL_FIREBASE_AUTH IMPLEMENTATION.
 
 *   Get authorization token - begin
     lv_http_client->request->set_method( 'POST' ).          "#EC NOTEXT
-    lv_http_client->request->set_content_type('application/json').
+    lv_http_client->request->set_content_type( 'application/json' ).
                                                             "#EC NOTEXT
 
 *   Build request payload
